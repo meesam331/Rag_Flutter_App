@@ -29,9 +29,7 @@ void main() {
 
   test('shows the HTTP status when the server returns an error page', () async {
     final api = DocumentApi(
-      client: MockClient(
-        (_) async => http.Response('<html>error</html>', 500),
-      ),
+      client: MockClient((_) async => http.Response('<html>error</html>', 500)),
       baseUrl: 'http://localhost:5000',
     );
     addTearDown(api.close);
@@ -42,7 +40,7 @@ void main() {
         isA<Exception>().having(
           (error) => error.toString(),
           'message',
-          contains('HTTP 500'),
+          'Server error (HTTP 500).',
         ),
       ),
     );

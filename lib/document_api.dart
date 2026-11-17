@@ -4,6 +4,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+class DocumentApiException implements Exception {
+  const DocumentApiException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class DocumentApi {
   DocumentApi({http.Client? client, String? baseUrl})
     : _client = client ?? http.Client(),
@@ -62,18 +71,24 @@ class DocumentApi {
       body = jsonDecode(response.body);
     } on FormatException {
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('Server error (HTTP ${response.statusCode}).');
+        throw DocumentApiException(
+          'Server error (HTTP ${response.statusCode}).',
+        );
       }
-      throw Exception('The server returned an invalid response.');
+      throw const DocumentApiException(
+        'The server returned an invalid response.',
+      );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = body is Map<String, dynamic> ? body['error'] : null;
-      throw Exception(
+      throw DocumentApiException(
         error is String ? error : 'Server error (HTTP ${response.statusCode}).',
       );
     }
     if (body is! Map<String, dynamic>) {
-      throw Exception('The server returned an invalid response.');
+      throw const DocumentApiException(
+        'The server returned an invalid response.',
+      );
     }
     return body;
   }
