@@ -37,6 +37,20 @@ def file_too_large(_error):
     return jsonify(error="PDF must be 16 MB or smaller."), 413
 
 
+def groq_error_message(status_code):
+    if status_code == 401:
+        return "Groq rejected the API key. Replace GROQ_API_KEY in .env with a valid key."
+    if status_code == 403:
+        return "This Groq key does not have access to the selected model."
+    if status_code == 404:
+        return "The selected Groq model was not found."
+    if status_code == 429:
+        return "Groq rate limit or usage limit reached. Try again later."
+    if status_code:
+        return f"Groq request failed (HTTP {status_code})."
+    return "Could not connect to Groq. Check your internet connection."
+
+
 @app.get("/health")
 def health():
     return jsonify(
@@ -120,12 +134,12 @@ def ask():
         for page in pages
     )
     prompt = f"Document:\n{context}\n\nQuestion: {question}"
-    chat = ChatGroq(
-        model="llama-3.3-70b-versatile",
-        api_key=api_key,
-        temperature=0,
-    )
     try:
+        chat = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            api_key=api_key,
+            temperature=0,
+        )
         answer = chat.invoke(
             [
                 (
@@ -136,8 +150,13 @@ def ask():
                 ("human", prompt),
             ]
         ).content
-    except (APIError, OSError, RuntimeError, ValueError):
-        return jsonify(error="Could not get an answer from Groq."), 502
+    except APIError as error:
+        status_code = getattr(error, "status_code", None)
+        app.logger.error("Groq request failed with HTTP %s", status_code or "unknown")
+        return jsonify(error=groq_error_message(status_code)), 502
+    except (OSError, RuntimeError, ValueError) as error:
+        app.logger.error("Groq request failed (%s)", type(error).__name__)
+        return jsonify(error="Could not prepare the Groq request. Please try again."), 502
 
     sources = sorted(
         {

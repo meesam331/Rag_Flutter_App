@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import app
+import httpx
+from groq import AuthenticationError
 
 
 class ApiTests(unittest.TestCase):
@@ -70,6 +72,32 @@ class ApiTests(unittest.TestCase):
             response = self.client.post("/ask", json={"question": "Question?"})
 
         self.assertEqual(response.status_code, 503)
+        self.assertIn(".env", response.get_json()["error"])
+
+    def test_ask_explains_invalid_groq_key(self):
+        app.document_db = SimpleNamespace(
+            as_retriever=lambda **_kwargs: SimpleNamespace(
+                invoke=lambda _question: [self.page]
+            )
+        )
+        api_response = httpx.Response(
+            401,
+            request=httpx.Request("POST", "https://api.groq.com"),
+        )
+        auth_error = AuthenticationError(
+            "Unauthorized",
+            response=api_response,
+            body={"error": {"message": "Invalid API key"}},
+        )
+
+        with (
+            patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}),
+            patch("app.ChatGroq") as chat,
+        ):
+            chat.return_value.invoke.side_effect = auth_error
+            response = self.client.post("/ask", json={"question": "When does it close?"})
+
+        self.assertEqual(response.status_code, 502)
         self.assertIn(".env", response.get_json()["error"])
 
     def test_upload_rejects_non_pdf(self):
