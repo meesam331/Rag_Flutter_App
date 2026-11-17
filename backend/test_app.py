@@ -56,6 +56,22 @@ class ApiTests(unittest.TestCase):
         response = self.client.post("/ask", json={"question": "What is inside?"})
         self.assertEqual(response.status_code, 400)
 
+    def test_health_reports_key_status_without_exposing_key(self):
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["groq_configured"])
+        self.assertNotIn("test-key", response.get_data(as_text=True))
+
+    def test_ask_explains_missing_key(self):
+        app.document_db = object()
+        with patch.dict(os.environ, {}, clear=True):
+            response = self.client.post("/ask", json={"question": "Question?"})
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn(".env", response.get_json()["error"])
+
     def test_upload_rejects_non_pdf(self):
         response = self.client.post(
             "/upload",

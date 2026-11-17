@@ -7,7 +7,7 @@ type a question, and get an answer with page sources.
 
 - Flutter provides the upload and question screens.
 - Flask reads the PDF and splits its text into passages.
-- Chroma and a local sentence-embedding model find relevant passages.
+- Chroma finds relevant passages using its built-in embedding model.
 - Groq answers using those passages.
 
 Only one PDF is kept at a time. Uploading another PDF replaces it. The PDF
@@ -48,8 +48,8 @@ From the project folder, run:
 uv run --python 3.13 --with-requirements backend\requirements.txt -- python backend\app.py
 ```
 
-The first PDF upload downloads Chroma's small built-in embedding model, so it
-may take a little longer.
+The first PDF upload downloads Chroma's embedding model, so it may take a
+little longer.
 
 ## Run Flutter
 

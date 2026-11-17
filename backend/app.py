@@ -1,9 +1,10 @@
 import os
 import tempfile
 import uuid
+from pathlib import Path
 
-from flask import Flask, jsonify, request
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 from groq import APIError
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
@@ -12,7 +13,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf.errors import FileNotDecryptedError, PdfReadError
 from werkzeug.utils import secure_filename
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
@@ -38,7 +39,10 @@ def file_too_large(_error):
 
 @app.get("/health")
 def health():
-    return jsonify(status="ok")
+    return jsonify(
+        status="ok",
+        groq_configured=bool(os.environ.get("GROQ_API_KEY")),
+    )
 
 
 @app.post("/upload")
@@ -94,7 +98,9 @@ def ask():
 
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        return jsonify(error="Set the GROQ_API_KEY environment variable."), 503
+        return jsonify(
+            error="Add GROQ_API_KEY to the project-root .env file, then restart Flask."
+        ), 503
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
