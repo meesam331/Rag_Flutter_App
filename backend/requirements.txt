@@ -1,0 +1,8 @@
+Flask>=3.0,<4.0
+python-dotenv
+groq
+langchain-chroma
+langchain-community
+langchain-groq
+langchain-text-splitters
+pypdf
